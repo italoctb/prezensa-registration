@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>14.0</LangVersion>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Registration.Domain/Registration.Domain.csproj" />
+    <ProjectReference Include="../Registration.Application/Registration.Application.csproj" />
+    <ProjectReference Include="../Registration.Infrastructure/Registration.Infrastructure.csproj" />
+  </ItemGroup>
+</Project>

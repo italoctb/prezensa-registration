@@ -1,0 +1,17 @@
+# Limites de serviço e bounded contexts
+
+Um **bounded context** delimita linguagem, regras e ownership do modelo. Um **microsserviço** é uma unidade lógica de código e evolução, potencialmente implantada de forma independente. Um **host** é a entrada executável desse serviço, como Api para HTTP ou Worker para mensagens e trabalho em segundo plano. Cada instância em execução é um **processo**; Api e Worker podem ter containers e escala separados sem se tornarem bounded contexts diferentes. O layout físico canônico fica em [estrutura do workspace](08-local-development.md).
+
+| Limite | Responsabilidade | Modelo e dados | Regra de isolamento |
+| --- | --- | --- | --- |
+| Registration (`services/registration`) | Construir Draft, submetê-lo, conduzir Registration e prover acesso às próprias rotas | Host Api atual; Draft e contas/sessões em MongoDB, Registration em Oracle | Não implementa regras antifraude; pode servir suas consultas simples |
+| Fraud (`services/fraud`) | Analisar risco e emitir decisão própria | `FraudAnalysis` ou equivalente e armazenamento próprio a definir | Não importa projetos de Registration |
+| Registration Query (condicional) | Projetar dados consolidados de múltiplos contextos se houver consulta concreta | `RegistrationView` desnormalizada e store a decidir | Só nasce se a projeção independente for necessária; não substitui GETs simples de Registration |
+
+`RegistrationDraft` e `Registration` são aggregates do mesmo contexto e compartilham os value objects de candidato. `Registration.Api` é o host HTTP atual: HTTP → Api → Application. `Registration.Worker` será outro host do mesmo serviço lógico se houver processamento assíncrono real: Kafka/trabalho em segundo plano → Worker → Application. Se necessário, Query será serviço em `services/registration-query`, com hosts próprios e contratos externos. O frontend será cliente em `apps/`.
+
+O `fraud-service` terá Domain, Application, Infrastructure e host próprios. Seu modelo provável começa com uma análise solicitada, executada e decidida (`Approved`, `Rejected` ou `ManualReview` se surgir o processo humano). Falha técnica é distinta de rejeição por risco. `FraudScore`, `RiskLevel`, resultados por regra e identidade da análise só entram quando houver algoritmo e necessidade de auditá-los. Não há obrigação de reproduzir os estados de Registration.
+
+Uma projeção futura poderia combinar status e progresso de Registration com decisões resumidas de Fraud, Identity e Compliance. Seu esquema, armazenamento, eventos de origem e necessidade de um serviço separado ficam em aberto até existir consulta real. O Draft já fornece seu próprio `CurrentStep` para retomada do onboarding; isso não requer Query Service.
+
+Registration não referencia `Fraud.Domain`; Fraud não referencia `Registration.Domain`. O mesmo isolamento vale para Registration Query. Comunicação entre serviços usará contratos externos explícitos por HTTP ou eventos Kafka, traduzidos na borda. Os diretórios de cada serviço devem poder virar repositórios independentes sem referências relativas cruzadas. Contratos compartilhados exigirão decisão própria; não há `BuildingBlocks` global sem repetição técnica real. A conta local identifica o owner do Draft e não cria um novo bounded context ou host. Uma futura extração para `identity-service` depende de necessidades próprias de identidade e contratos externos; `notification-service` e `compliance-service` também permanecem possibilidades futuras.
